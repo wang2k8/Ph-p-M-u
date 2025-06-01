@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Phép màu1</title>
+    <title>Phép màu</title>
     <link rel="icon" type="image/png" href="./icon.png">
     <style>
         @font-face {
@@ -89,7 +89,7 @@
 </head>
 <body>
     <div id="info-screen">
-        <h1>Phép màu 1/6(3) </h1>
+        <h1>Phép màu 1/6(4) </h1>
         <p><strong>Máy tính:</strong></p>
         <p>Chuột: Xoay góc nhìn</p>
         <p>W/A/S/D: Di chuyển</p>
@@ -393,8 +393,8 @@
             const gamma = THREE.MathUtils.degToRad(event.gamma - initialOrientation.gamma);
             camera.rotation.order = 'YXZ';
             camera.rotation.y = alpha;
-            camera.rotation.x = beta;
-            camera.rotation.z = -gamma;
+            camera.rotation.x = -beta;
+            camera.rotation.z = gamma;
         }
 
         function preloadImages() {
