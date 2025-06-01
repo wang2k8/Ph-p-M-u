@@ -89,7 +89,7 @@
 </head>
 <body>
     <div id="info-screen">
-        <h1>Phép màu 1/6   5</h1>
+        <h1>Phép màu 1/6</h1>
         <p><strong>Máy tính:</strong></p>
         <p>Chuột: Xoay góc nhìn</p>
         <p>W/A/S/D: Di chuyển</p>
@@ -389,20 +389,53 @@
                 return;
             }
 
-            // Convert device orientation angles to radians
-            let alpha = THREE.MathUtils.degToRad(event.alpha - initialOrientation.alpha); // Yaw (rotation around Z-axis)
-            let beta = THREE.MathUtils.degToRad(event.beta - initialOrientation.beta);   // Pitch (rotation around X-axis)
-            let gamma = THREE.MathUtils.degToRad(event.gamma - initialOrientation.gamma); // Roll (rotation around Z-axis)
+            // Convert angles to radians
+            let alpha = THREE.MathUtils.degToRad(event.alpha || 0); // Yaw (rotation around Z-axis)
+            let beta = THREE.MathUtils.degToRad(event.beta || 0);   // Pitch (rotation around X-axis)
+            let gamma = THREE.MathUtils.degToRad(event.gamma || 0); // Roll (rotation around Y-axis)
 
-            // Adjust for device orientation and coordinate system
-            // Invert alpha to correct left/right rotation
-            camera.rotation.order = 'YXZ'; // Set rotation order to yaw-pitch-roll
-            camera.rotation.y = -alpha; // Invert yaw for natural left/right rotation
-            camera.rotation.x = beta;   // Pitch for up/down
-            camera.rotation.z = -gamma; // Invert roll for natural tilt
+            // Adjust for initial orientation
+            alpha -= THREE.MathUtils.degToRad(initialOrientation.alpha || 0);
+            beta -= THREE.MathUtils.degToRad(initialOrientation.beta || 0);
+            gamma -= THREE.MathUtils.degToRad(initialOrientation.gamma || 0);
 
-            // Ensure pitch stays within reasonable bounds to avoid flipping
-            camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+            // Detect device orientation (portrait or landscape)
+            const isLandscape = Math.abs(window.orientation) === 90;
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+            // Create a quaternion for device orientation
+            const quaternion = new THREE.Quaternion();
+            const euler = new THREE.Euler();
+
+            // Apply rotations in YXZ order for natural movement
+            if (isIOS) {
+                // iOS uses a different coordinate system
+                euler.set(beta, alpha, -gamma, 'YXZ');
+            } else {
+                // Android and others
+                euler.set(beta, -alpha, gamma, 'YXZ');
+            }
+
+            // Adjust for landscape orientation
+            if (isLandscape) {
+                const landscapeAdjust = new THREE.Euler(0, 0, Math.PI / 2);
+                const landscapeQuat = new THREE.Quaternion().setFromEuler(landscapeAdjust);
+                quaternion.multiply(landscapeQuat);
+            }
+
+            // Convert Euler to Quaternion
+            quaternion.setFromEuler(euler);
+
+            // Apply quaternion to camera
+            camera.quaternion.copy(quaternion);
+
+            // Limit pitch to avoid unnatural flipping
+            const eulerCheck = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+            eulerCheck.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, eulerCheck.x));
+            camera.quaternion.setFromEuler(eulerCheck);
+
+            // Log for debugging
+            console.log(`Alpha: ${THREE.MathUtils.radToDeg(alpha)}, Beta: ${THREE.MathUtils.radToDeg(beta)}, Gamma: ${THREE.MathUtils.radToDeg(gamma)}`);
         }
 
         function preloadImages() {
