@@ -172,10 +172,10 @@
         let isPinching = false, isDragging = false;
         let useGyroscope = false, initialOrientation = null;
         let lastParticleTime = 0;
-        let isExperienceStarted = false; // Track if experience has started
+        let isExperienceStarted = false;
         const romanticWords = ['I', 'Love', 'You', '<3', 'I', 'Love', 'You', '<3'];
         let font = null, titleFont = null;
-        const maxParticles = 150, maxTexts = 150, maxDustGroups = 100, maxImages = 36;
+        const maxParticles = 150, maxTexts = 150, maxDustGroups = 50, maxImages = 36;
         let availableImages = [];
         const initialLoadTime = performance.now();
         let dynamicLight;
@@ -183,25 +183,22 @@
 
         // Initialize the scene
         function init() {
-            // Setup scene and camera
+            console.log('Initializing scene...');
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
             camera.position.set(0, 0, 10);
 
-            // Setup WebGL renderer
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.body.appendChild(renderer.domElement);
 
-            // Setup CSS3D renderer for images
             cssRenderer = new THREE.CSS3DRenderer();
             cssRenderer.setSize(window.innerWidth, window.innerHeight);
             cssRenderer.domElement.style.position = 'absolute';
             cssRenderer.domElement.style.top = '0';
             document.body.appendChild(cssRenderer.domElement);
 
-            // Setup post-processing effects
             composer = new POSTPROCESSING.EffectComposer(renderer);
             composer.addPass(new POSTPROCESSING.RenderPass(scene, camera));
             const dofEffect = new POSTPROCESSING.DepthOfFieldEffect(camera, {
@@ -218,29 +215,34 @@
             const effectPass = new POSTPROCESSING.EffectPass(camera, dofEffect, bloomEffect);
             composer.addPass(effectPass);
 
-            // Add lighting
             scene.add(new THREE.AmbientLight(0x404040, 0.9));
             dynamicLight = new THREE.PointLight(0xff6666, 3.0, 100, 2);
             dynamicLight.position.set(10, 10, 10);
             scene.add(dynamicLight);
 
-            // Setup controls
             controls = new THREE.PointerLockControls(camera, renderer.domElement);
             controls.enabled = false;
             controls.addEventListener('unlock', () => {
+                console.log('Controls unlocked, showing info screen');
                 document.getElementById('info-screen').style.display = 'flex';
                 controls.enabled = false;
                 isExperienceStarted = false;
             });
 
-            // Load images
             availableImages = Array.from(document.querySelectorAll('#image-container img'));
-            if (availableImages.length === 0) console.error('No images found');
-            else preloadImages();
+            if (availableImages.length === 0) {
+                console.error('No images found in #image-container');
+            } else {
+                console.log(`Found ${availableImages.length} images`);
+                preloadImages();
+            }
 
-            // Load fonts
             const loader = new THREE.FontLoader();
             function createMainTexts() {
+                if (!titleFont) {
+                    console.warn('Title font not loaded yet');
+                    return;
+                }
                 ['I', 'LOVE', 'YOU'].forEach((text, index) => {
                     const geometry = new THREE.TextGeometry(text, {
                         font: titleFont,
@@ -269,6 +271,7 @@
                     };
                     scene.add(mesh);
                     texts.push(mesh);
+                    console.log(`Created main text: ${text}`);
                 });
             }
 
@@ -290,7 +293,6 @@
                 console.log('Loaded helvetiker_bold for text spawning');
             });
 
-            // Create initial particles
             const particleGeometry = new THREE.SphereGeometry(0.3, 16, 16);
             for (let i = 0; i < 50; i++) {
                 const material = new THREE.MeshBasicMaterial({
@@ -312,11 +314,11 @@
                 scene.add(particle);
                 particles.push(particle);
             }
+            console.log('Created 50 initial particles');
 
-            // Create dust particles
             const dustGeometry = new THREE.BufferGeometry();
             const dustVertices = [];
-            const dustCount = 600;
+            const dustCount = 300; // Reduced for performance
             for (let i = 0; i < dustCount; i++) {
                 dustVertices.push(
                     camera.position.x + (Math.random() - 0.5) * 1000,
@@ -326,7 +328,7 @@
             }
             dustGeometry.setAttribute('position', new THREE.Float32BufferAttribute(dustVertices, 3));
             const dustMaterial = new THREE.PointsMaterial({
-                color: Math.random() *Math.random() > 0.5 ? 0xffffff : 0xff6666,
+                color: Math.random() > 0.5 ? 0xffffff : 0xff6666,
                 size: 0.5,
                 map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/circle.png'),
                 transparent: true,
@@ -344,8 +346,8 @@
                 ))
             };
             dustParticles.push(dust);
+            console.log(`Created dust group with ${dustCount} particles`);
 
-            // Event listeners
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
             document.getElementById('start-button').addEventListener('click', startExperience);
@@ -364,7 +366,6 @@
             animate();
         }
 
-        // Gyroscope setup
         function setupGyroscope() {
             if (window.DeviceOrientationEvent) {
                 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -374,6 +375,8 @@
                                 window.addEventListener('deviceorientation', onDeviceOrientation);
                                 useGyroscope = true;
                                 console.log('Gyroscope permission granted');
+                            } else {
+                                console.warn('Gyroscope permission denied');
                             }
                         })
                         .catch(error => console.error('Error requesting gyroscope permission:', error));
@@ -387,10 +390,14 @@
             }
         }
 
-        // Handle device orientation
         function onDeviceOrientation(event) {
             if (!initialOrientation) {
-                initialOrientation = { alpha: event.alpha, event.beta, gamma };
+                if (event.alpha === null || event.beta === null || event.gamma === null) {
+                    console.warn('Device orientation data unavailable');
+                    return;
+                }
+                initialOrientation = { alpha: event.alpha, beta: event.beta, gamma: event.gamma };
+                console.log('Initial orientation set:', initialOrientation);
                 return;
             }
 
@@ -416,7 +423,7 @@
 
             if (isLandscape) {
                 const landscapeAdjust = new THREE.Euler(0, 0, Math.PI / 2);
-                const landscapeQuat = new THREE.Quaternion().setFromEuler(landscape);
+                const landscapeQuat = new THREE.Quaternion().setFromEuler(landscapeAdjust);
                 quaternion.multiply(landscapeQuat);
             }
 
@@ -431,7 +438,6 @@
             camera.quaternion.setFromEuler(eulerCheck);
         }
 
-        // Preload images
         function preloadImages() {
             availableImages.forEach(img => {
                 const tempImage = new Image();
@@ -441,8 +447,8 @@
             });
         }
 
-        // Start experience
         function startExperience() {
+            console.log('Starting experience...');
             document.getElementById('info-screen').style.display = 'none';
             controls.enabled = true;
             isExperienceStarted = true;
@@ -457,9 +463,7 @@
             }
         }
 
-        // Keyboard controls
         function onKeyDown(event) {
-            // Prevent browser shortcuts when experience is active
             if (isExperienceStarted && event.ctrlKey) {
                 if (event.code === 'KeyW' || event.code === 'KeyS') {
                     event.preventDefault();
@@ -474,7 +478,7 @@
                 case 'KeyD': moveRight = true; break;
                 case 'ShiftLeft': moveUp = true; break;
                 case 'Space': moveDown = true; break;
-                case 'ControlLeft': 
+                case 'ControlLeft':
                 case 'ControlRight': isCtrlPressed = true; break;
                 case 'Escape': controls.unlock(); break;
             }
@@ -488,12 +492,11 @@
                 case 'KeyD': moveRight = false; break;
                 case 'ShiftLeft': moveUp = false; break;
                 case 'Space': moveDown = false; break;
-                case 'ControlLeft': 
+                case 'ControlLeft':
                 case 'ControlRight': isCtrlPressed = false; break;
             }
         }
 
-        // Touch controls
         function onTouchStart(event) {
             event.preventDefault();
             console.log(`Touch start: ${event.touches.length} fingers`);
@@ -547,18 +550,20 @@
             isDragging = false;
         }
 
-        // Window resize handler
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
             cssRenderer.setSize(window.innerWidth, window.innerHeight);
             composer.setSize(window.innerWidth, window.innerHeight);
+            console.log('Window resized:', window.innerWidth, window.innerHeight);
         }
 
-        // Spawn text objects
         function spawnTextNearCamera() {
-            if (!font || texts.length >= maxTexts) return;
+            if (!font || texts.length >= maxTexts) {
+                console.log('Cannot spawn text: font not loaded or max texts reached');
+                return;
+            }
             const text = romanticWords[Math.floor(Math.random() * romanticWords.length)];
             const geometry = new THREE.TextGeometry(text, {
                 font: font,
@@ -587,11 +592,14 @@
             };
             scene.add(mesh);
             texts.push(mesh);
+            console.log(`Spawned text: ${text}`);
         }
 
-        // Spawn particles
         function spawnParticleAtCamera() {
-            if (particles.length >= maxParticles) return;
+            if (particles.length >= maxParticles) {
+                console.log('Max particles reached');
+                return;
+            }
             const material = new THREE.MeshBasicMaterial({
                 color: Math.random() > 0.5 ? 0xff4d4d : 0xffffff,
                 transparent: true,
@@ -612,14 +620,17 @@
             };
             scene.add(particle);
             particles.push(particle);
+            console.log('Spawned particle');
         }
 
-        // Spawn dust
         function spawnDustNearCamera() {
-            if (dustParticles.length >= maxDustGroups) return;
+            if (dustParticles.length >= maxDustGroups) {
+                console.log('Max dust groups reached');
+                return;
+            }
             const dustGeometry = new THREE.BufferGeometry();
             const dustVertices = [];
-            const dustCount = 600;
+            const dustCount = 300;
             for (let i = 0; i < dustCount; i++) {
                 dustVertices.push(
                     camera.position.x + (Math.random() - 0.5) * 1000,
@@ -647,11 +658,14 @@
                 ))
             };
             dustParticles.push(dust);
+            console.log(`Spawned dust group with ${dustCount} particles`);
         }
 
-        // Spawn images
         function spawnImageNearCamera() {
-            if (imagePlanes.length >= maxImages || availableImages.length === 0) return;
+            if (imagePlanes.length >= maxImages || availableImages.length === 0) {
+                console.log('Cannot spawn image: max images reached or no images available');
+                return;
+            }
             const imgElement = availableImages[Math.floor(Math.random() * availableImages.length)];
             const cssObject = new THREE.CSS3DObject(imgElement.cloneNode(true));
             const minDistance = 60, maxDistance = 250;
@@ -669,19 +683,18 @@
             cssObject.userData = {
                 velocity: new THREE.Vector3((Math.random() - 0.5) * 0.015, 0.015, (Math.random() - 0.5) * 0.015),
                 pulse: Math.random() * Math.PI * 2,
-                rotationSpeed: (Math.random() - 0.5) * 0.005
+                rotationSpeed: (Math.random() - 0.5) * 0.01
             };
             scene.add(cssObject);
             imagePlanes.push(cssObject);
+            console.log('Spawned image');
         }
 
-        // Animation loop
         function animate() {
             requestAnimationFrame(animate);
             const time = performance.now();
             const delta = (time - prevTime) / 1000;
 
-            // Update light
             dynamicLight.position.set(
                 10 * Math.sin(time * 0.001),
                 10 * Math.cos(time * 0.001),
@@ -689,7 +702,6 @@
             );
             dynamicLight.intensity = 3.0 + Math.sin(time * 0.002) * 0.5;
 
-            // Spawn objects
             const isInitialLoad = time < initialLoadTime + 5000;
             const textSpawnChance = isInitialLoad ? 0.4 : 0.15;
             const dustSpawnChance = isInitialLoad ? 0.8 : 0.4;
@@ -705,7 +717,6 @@
             if (Math.random() < dustSpawnChance && dustParticles.length < maxDustGroups) spawnDustNearCamera();
             if (Math.random() < imageSpawnChance && imagePlanes.length < maxImages) spawnImageNearCamera();
 
-            // Update particles
             particles.forEach(particle => {
                 particle.position.add(particle.userData.velocity);
                 particle.rotation.x += particle.userData.rotationSpeed;
@@ -720,34 +731,32 @@
                 }
             });
 
-            // Update texts
             texts.forEach(text => {
                 text.position.add(text.userData.velocity);
                 text.rotation.y += text.userData.rotationSpeed;
-                const pulse = Math.sin(time * 0.001 + text.userData.time.pulse);
+                const pulse = Math.sin(time * 0.001 + text.userData.pulse) * 0.2 + 0.8;
                 const distance = text.position.distanceTo(camera.position);
                 const fadeFactor = distance < clearZone ? 1 : Math.max(0, Math.exp(-(distance - clearZone) / 80));
                 text.material.opacity = pulse * fadeFactor;
                 if (distance > maxDistance || text.position.y < camera.position.y - maxDistance) {
                     scene.remove(text);
-                    texts = texts.filter(p => p !== text);
+                    texts = texts.filter(t => t !== text);
                 }
             });
 
-            // Update dust
             dustParticles = dustParticles.filter(dust => {
                 const positions = dust.geometry.attributes.position.array;
                 const velocities = dust.userData.velocities;
-                let keep = true;
+                let keep = false;
                 for (let i = 0; i < positions.length; i += 3) {
                     positions[i] += velocities[i / 3].x;
                     positions[i + 1] += velocities[i / 3].y;
                     positions[i + 2] += velocities[i / 3].z;
-                    const distance = new THREE.Vector3(positions[i]);
-                    if (distance <= maxDistance && positions[i + 1] > camera.position.y - maxDistance) {
+                    const distance = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]).distanceTo(camera.position);
+                    if (distance < maxDistance && positions[i + 1] > camera.position.y - maxDistance) {
                         keep = true;
                         const fadeFactor = distance < clearZone ? 1 : Math.max(0, Math.exp(-(distance - clearZone) / 80));
-                        dust.material.opacity = 1.0 * fadeFactor;
+                        dust.material.opacity = fadeFactor;
                     }
                 }
                 dust.geometry.attributes.position.needsUpdate = true;
@@ -759,7 +768,6 @@
                 return true;
             });
 
-            // Update images
             imagePlanes.forEach(image => {
                 image.position.add(image.userData.velocity);
                 image.lookAt(camera.position);
@@ -771,14 +779,13 @@
                 if (distance > maxDistance || image.position.y > camera.position.y + maxDistance) {
                     scene.remove(image);
                     imagePlanes = imagePlanes.filter(img => img !== image);
-                });
+                }
             });
 
-            // Update desktop controls
             if (!isMobile) {
-                velocity.x *= 0.9;
-                velocity.y *= 0.9;
-                velocity.z *= 0.9;
+                velocity.x *= 0.95;
+                velocity.y *= 0.95;
+                velocity.z *= 0.95;
 
                 direction.z = Number(moveForward) - Number(moveBackward);
                 direction.x = Number(moveRight) - Number(moveLeft);
