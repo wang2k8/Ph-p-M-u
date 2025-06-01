@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Phép màu</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Phép Màu 1/6</title>
     <link rel="icon" type="image/png" href="./icon.png">
     <style>
         @font-face {
             font-family: 'TF-Love-House';
             src: url('./TF-Love-House.otf') format('opentype');
+            font-weight: normal;
+            font-style: normal;
         }
         body, html {
             margin: 0;
@@ -17,16 +20,18 @@
             height: 100%;
             overflow: hidden;
             background: #000;
-            touch-action: none; /* Prevent default touch behaviors */
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         #info-screen {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, rgba(255, 77, 77, 0.8), rgba(255, 255, 255, 0.3));
-            color: white;
+            background: linear-gradient(135deg, rgba(255, 77, 77, 0.9), rgba(255, 255, 255, 0.4));
+            color: #fff;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -34,33 +39,34 @@
             text-align: center;
             font-family: 'TF-Love-House', sans-serif;
             z-index: 1000;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
         }
         #info-screen h1 {
-            font-size: 2.5em;
-            margin-bottom: 15px;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.9), 0 0 5px rgba(255, 77, 77, 0.8);
         }
         #info-screen p {
-            font-size: 1.2em;
-            margin: 8px;
-            text-shadow: 0 0 5px rgba(255, 77, 77, 0.8);
+            font-size: 1.3em;
+            margin: 10px 20px;
+            text-shadow: 0 0 8px rgba(255, 77, 77, 0.7);
         }
         #start-button {
-            padding: 10px 20px;
-            font-size: 1.2em;
-            background: #ff4d4d;
-            color: white;
-            border: 2px solid #fff;
-            border-radius: 8px;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            background: linear-gradient(45deg, #ff4d4d, #ff7878);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 15px rgba(255, 77, 77, 0.7);
+            box-shadow: 0 0 20px rgba(255, 77, 77, 0.8), 0 0 10px rgba(255, 255, 255, 0.5);
             font-family: 'TF-Love-House', sans-serif;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         #start-button:hover {
-            background: #ff4040;
             transform: scale(1.1);
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 30px rgba(255, 77, 77, 1), 0 0 15px rgba(255, 255, 255, 0.8);
         }
         canvas {
             display: block;
@@ -68,11 +74,11 @@
         }
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.08); }
             100% { transform: scale(1); }
         }
         #start-button {
-            animation: pulse 3s infinite;
+            animation: pulse 2.5s infinite ease-in-out;
         }
         #image-container {
             display: none;
@@ -82,27 +88,27 @@
             height: 300px;
             max-width: 300px;
             max-height: 300px;
-            object-fit: contain;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(255, 77, 77, 0.5);
+            object-fit: cover;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(255, 77, 77, 0.6);
         }
     </style>
 </head>
 <body>
     <div id="info-screen">
-        <h1>Phép màu 1/6</h1>
+        <h1>Phép Màu 1/6</h1>
         <p><strong>Máy tính:</strong></p>
         <p>Chuột: Xoay góc nhìn</p>
         <p>W/A/S/D: Di chuyển</p>
         <p>Space: Bay lên</p>
         <p>Shift: Bay xuống</p>
-        <p>Ctrl: Tăng tốc độ</p>
+        <p>Ctrl: Tăng tốc</p>
         <p>ESC: Thoát</p>
         <p><strong>Điện thoại:</strong></p>
-        <p>Xoay điện thoại: Quan sát 360 độ</p>
+        <p>Xoay điện thoại: Quan sát 360°</p>
         <p>Vuốt 1 ngón: Xoay góc nhìn</p>
         <p>Zoom 2 ngón: Tiến/lùi</p>
-        <button id="start-button">Click</button>
+        <button id="start-button">Bắt đầu</button>
     </div>
     <div id="image-container">
         <img src="./anh (1).jpg" alt="Image 1">
@@ -153,106 +159,97 @@
     <script src="https://cdn.jsdelivr.net/npm/postprocessing@6.23.2/build/postprocessing.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/renderers/CSS3DRenderer.js"></script>
     <script>
+        // Core variables
         let scene, camera, renderer, cssRenderer, controls, composer;
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, moveUp = false, moveDown = false;
         let isCtrlPressed = false;
         let velocity = new THREE.Vector3();
         let direction = new THREE.Vector3();
         let prevTime = performance.now();
-        let particles = [];
-        let texts = [];
-        let dustParticles = [];
-        let imagePlanes = [];
-        let isMobile = /Mobi|Android/i.test(navigator.userAgent);
+        let particles = [], texts = [], dustParticles = [], imagePlanes = [];
+        const isMobile = /Mobi|Android/i.test(navigator.userAgent);
         let touchStartX, touchStartY, pinchStartDistance;
         let isPinching = false, isDragging = false;
-        let useGyroscope = false;
-        let initialOrientation = null;
+        let useGyroscope = false, initialOrientation = null;
         let lastParticleTime = 0;
+        let isExperienceStarted = false; // Track if experience has started
         const romanticWords = ['I', 'Love', 'You', '<3', 'I', 'Love', 'You', '<3'];
-        let font = null;
-        let titleFont = null;
-        const maxParticles = 200;
-        const maxTexts = 200;
-        const maxDustGroups = 150;
-        const maxImages = 36;
+        let font = null, titleFont = null;
+        const maxParticles = 150, maxTexts = 150, maxDustGroups = 100, maxImages = 36;
         let availableImages = [];
         const initialLoadTime = performance.now();
         let dynamicLight;
-        const maxDistance = 1000;
-        const clearZone = 50;
-        const blurStartDistance = 150;
+        const maxDistance = 1000, clearZone = 50;
 
+        // Initialize the scene
         function init() {
+            // Setup scene and camera
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
             camera.position.set(0, 0, 10);
 
+            // Setup WebGL renderer
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.sortObjects = true;
             document.body.appendChild(renderer.domElement);
 
+            // Setup CSS3D renderer for images
             cssRenderer = new THREE.CSS3DRenderer();
             cssRenderer.setSize(window.innerWidth, window.innerHeight);
             cssRenderer.domElement.style.position = 'absolute';
             cssRenderer.domElement.style.top = '0';
             document.body.appendChild(cssRenderer.domElement);
 
+            // Setup post-processing effects
             composer = new POSTPROCESSING.EffectComposer(renderer);
             composer.addPass(new POSTPROCESSING.RenderPass(scene, camera));
             const dofEffect = new POSTPROCESSING.DepthOfFieldEffect(camera, {
                 focalLength: 0.4,
-                bokehScale: 1.5,
+                bokehScale: 2.0,
                 height: window.innerHeight,
                 focalDistance: 0.7
             });
             const bloomEffect = new POSTPROCESSING.BloomEffect({
-                intensity: 3.5,
+                intensity: 4.0,
                 luminanceThreshold: 0.3,
                 luminanceSmoothing: 0.1
             });
             const effectPass = new POSTPROCESSING.EffectPass(camera, dofEffect, bloomEffect);
             composer.addPass(effectPass);
 
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
-            scene.add(ambientLight);
-
-            dynamicLight = new THREE.PointLight(0xff6666, 2.5, 100, 2);
+            // Add lighting
+            scene.add(new THREE.AmbientLight(0x404040, 0.9));
+            dynamicLight = new THREE.PointLight(0xff6666, 3.0, 100, 2);
             dynamicLight.position.set(10, 10, 10);
             scene.add(dynamicLight);
 
+            // Setup controls
             controls = new THREE.PointerLockControls(camera, renderer.domElement);
             controls.enabled = false;
-
             controls.addEventListener('unlock', () => {
                 document.getElementById('info-screen').style.display = 'flex';
                 controls.enabled = false;
+                isExperienceStarted = false;
             });
 
+            // Load images
             availableImages = Array.from(document.querySelectorAll('#image-container img'));
-            if (availableImages.length === 0) {
-                console.error('No images found in #image-container');
-            } else {
-                console.log(`Found ${availableImages.length} images in HTML`);
-                preloadImages();
-            }
+            if (availableImages.length === 0) console.error('No images found');
+            else preloadImages();
 
+            // Load fonts
             const loader = new THREE.FontLoader();
-
             function createMainTexts() {
-                const mainTexts = ['I', 'LOVE', 'YOU'];
-                mainTexts.forEach((text, index) => {
+                ['I', 'LOVE', 'YOU'].forEach((text, index) => {
                     const geometry = new THREE.TextGeometry(text, {
                         font: titleFont,
-                        size: 6.4,
-                        height: 0.32,
+                        size: 7,
+                        height: 0.4,
                         curveSegments: 12,
                         bevelEnabled: true,
-                        bevelThickness: 0.176,
-                        bevelSize: 0.132,
-                        bevelOffset: 0,
+                        bevelThickness: 0.2,
+                        bevelSize: 0.15,
                         bevelSegments: 5
                     });
                     const material = new THREE.MeshBasicMaterial({
@@ -265,7 +262,7 @@
                         camera.position.y + (Math.random() - 0.5) * 500,
                         camera.position.z + (Math.random() - 0.5) * 500
                     );
-                    mesh.userData = { 
+                    mesh.userData = {
                         pulse: Math.random() * Math.PI * 2,
                         rotationSpeed: (Math.random() - 0.5) * 0.02,
                         velocity: new THREE.Vector3((Math.random() - 0.5) * 0.02, -0.05, (Math.random() - 0.5) * 0.02)
@@ -275,30 +272,31 @@
                 });
             }
 
-            loader.load('./KD-Yon-Love.ttf', function (loadedFont) {
+            loader.load('./KD-Yon-Love.ttf', (loadedFont) => {
                 titleFont = loadedFont;
                 createMainTexts();
-                console.log('Loaded KD-Yon-Love.ttf successfully');
-            }, undefined, function (error) {
+                console.log('Loaded KD-Yon-Love.ttf');
+            }, undefined, (error) => {
                 console.error('Error loading KD-Yon-Love.ttf:', error);
-                loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', function (loadedFont) {
+                loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', (loadedFont) => {
                     titleFont = loadedFont;
                     createMainTexts();
                     console.log('Loaded fallback font helvetiker_bold');
                 });
             });
 
-            loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', function (loadedFont) {
+            loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', (loadedFont) => {
                 font = loadedFont;
                 console.log('Loaded helvetiker_bold for text spawning');
             });
 
-            const particleGeometry = new THREE.SphereGeometry(0.25, 16, 16);
+            // Create initial particles
+            const particleGeometry = new THREE.SphereGeometry(0.3, 16, 16);
             for (let i = 0; i < 50; i++) {
                 const material = new THREE.MeshBasicMaterial({
                     color: Math.random() > 0.5 ? 0xff4d4d : 0xffffff,
                     transparent: true,
-                    opacity: 0.8
+                    opacity: 0.9
                 });
                 const particle = new THREE.Mesh(particleGeometry, material);
                 particle.position.set(
@@ -306,8 +304,8 @@
                     camera.position.y + (Math.random() - 0.5) * 500,
                     camera.position.z + (Math.random() - 0.5) * 500
                 );
-                particle.userData = { 
-                    velocity: new THREE.Vector3((Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02),
+                particle.userData = {
+                    velocity: new THREE.Vector3((Math.random() - 0.5) * 0.03, (Math.random() - 0.5) * 0.03, (Math.random() - 0.5) * 0.03),
                     pulse: Math.random() * Math.PI * 2,
                     rotationSpeed: (Math.random() - 0.5) * 0.02
                 };
@@ -315,9 +313,10 @@
                 particles.push(particle);
             }
 
+            // Create dust particles
             const dustGeometry = new THREE.BufferGeometry();
             const dustVertices = [];
-            const dustCount = 800;
+            const dustCount = 600;
             for (let i = 0; i < dustCount; i++) {
                 dustVertices.push(
                     camera.position.x + (Math.random() - 0.5) * 1000,
@@ -327,11 +326,11 @@
             }
             dustGeometry.setAttribute('position', new THREE.Float32BufferAttribute(dustVertices, 3));
             const dustMaterial = new THREE.PointsMaterial({
-                color: Math.random() > 0.5 ? 0xffffff : 0xff6666,
-                size: 0.4,
+                color: Math.random() *Math.random() > 0.5 ? 0xffffff : 0xff6666,
+                size: 0.5,
                 map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/circle.png'),
                 transparent: true,
-                opacity: 1.2,
+                opacity: 1.0,
                 blending: THREE.AdditiveBlending,
                 depthWrite: false
             });
@@ -339,23 +338,23 @@
             scene.add(dust);
             dust.userData = {
                 velocities: Array(dustCount).fill().map(() => new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.01,
-                    -0.03,
-                    (Math.random() - 0.5) * 0.01
+                    (Math.random() - 0.5) * 0.015,
+                    -0.05,
+                    (Math.random() - 0.5) * 0.015
                 ))
             };
             dustParticles.push(dust);
 
+            // Event listeners
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
             document.getElementById('start-button').addEventListener('click', startExperience);
 
             if (isMobile) {
                 setupGyroscope();
-                renderer.domElement.addEventListener('touchstart', onTouchStart);
+                renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
                 renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
-                renderer.domElement.addEventListener('touchend', onTouchEnd);
-                // Prevent default pinch-to-zoom
+                renderer.domElement.addEventListener('touchend', onTouchEnd, { passive: false });
                 document.addEventListener('gesturestart', (e) => e.preventDefault());
                 document.addEventListener('gesturechange', (e) => e.preventDefault());
                 document.addEventListener('gestureend', (e) => e.preventDefault());
@@ -365,6 +364,7 @@
             animate();
         }
 
+        // Gyroscope setup
         function setupGyroscope() {
             if (window.DeviceOrientationEvent) {
                 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -374,8 +374,6 @@
                                 window.addEventListener('deviceorientation', onDeviceOrientation);
                                 useGyroscope = true;
                                 console.log('Gyroscope permission granted');
-                            } else {
-                                console.log('Gyroscope permission denied, falling back to touch rotation');
                             }
                         })
                         .catch(error => console.error('Error requesting gyroscope permission:', error));
@@ -385,65 +383,55 @@
                     console.log('Gyroscope enabled without permission');
                 }
             } else {
-                console.log('DeviceOrientation API not supported, falling back to touch rotation');
+                console.log('DeviceOrientation API not supported');
             }
         }
 
+        // Handle device orientation
         function onDeviceOrientation(event) {
             if (!initialOrientation) {
-                initialOrientation = { alpha: event.alpha, beta: event.beta, gamma: event.gamma };
+                initialOrientation = { alpha: event.alpha, event.beta, gamma };
                 return;
             }
 
-            // Convert angles to radians
-            let alpha = THREE.MathUtils.degToRad(event.alpha || 0); // Yaw
-            let beta = THREE.MathUtils.degToRad(event.beta || 0);   // Pitch
-            let gamma = THREE.MathUtils.degToRad(event.gamma || 0); // Roll
+            let alpha = THREE.MathUtils.degToRad(event.alpha || 0);
+            let beta = THREE.MathUtils.degToRad(event.beta || 0);
+            let gamma = THREE.MathUtils.degToRad(event.gamma || 0);
 
-            // Adjust for initial orientation
             alpha -= THREE.MathUtils.degToRad(initialOrientation.alpha || 0);
             beta -= THREE.MathUtils.degToRad(initialOrientation.beta || 0);
             gamma -= THREE.MathUtils.degToRad(initialOrientation.gamma || 0);
 
-            // Detect device orientation
             const isLandscape = Math.abs(window.orientation) === 90;
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-            // Create quaternion
             const quaternion = new THREE.Quaternion();
             const euler = new THREE.Euler();
 
-            // Apply rotations
             if (isIOS) {
                 euler.set(beta, -alpha, gamma, 'YXZ');
             } else {
                 euler.set(beta, alpha, -gamma, 'YXZ');
             }
 
-            // Adjust for landscape
             if (isLandscape) {
                 const landscapeAdjust = new THREE.Euler(0, 0, Math.PI / 2);
-                const landscapeQuat = new THREE.Quaternion().setFromEuler(landscapeAdjust);
+                const landscapeQuat = new THREE.Quaternion().setFromEuler(landscape);
                 quaternion.multiply(landscapeQuat);
             }
 
-            // Convert Euler to Quaternion
             quaternion.setFromEuler(euler);
 
-            // Apply to camera if not dragging
-            if (!isDragging) {
+            if (!isDragging && !isPinching) {
                 camera.quaternion.copy(quaternion);
             }
 
-            // Limit pitch
             const eulerCheck = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
             eulerCheck.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, eulerCheck.x));
             camera.quaternion.setFromEuler(eulerCheck);
-
-            // Debug
-            console.log(`Alpha: ${THREE.MathUtils.radToDeg(alpha)}, Beta: ${THREE.MathUtils.radToDeg(beta)}, Gamma: ${THREE.MathUtils.radToDeg(gamma)}`);
         }
 
+        // Preload images
         function preloadImages() {
             availableImages.forEach(img => {
                 const tempImage = new Image();
@@ -453,11 +441,15 @@
             });
         }
 
+        // Start experience
         function startExperience() {
             document.getElementById('info-screen').style.display = 'none';
             controls.enabled = true;
+            isExperienceStarted = true;
             if (!isMobile) {
                 controls.lock();
+            } else {
+                controls.enabled = false;
             }
             const audio = document.getElementById('background-music');
             if (audio.paused) {
@@ -465,7 +457,16 @@
             }
         }
 
+        // Keyboard controls
         function onKeyDown(event) {
+            // Prevent browser shortcuts when experience is active
+            if (isExperienceStarted && event.ctrlKey) {
+                if (event.code === 'KeyW' || event.code === 'KeyS') {
+                    event.preventDefault();
+                    console.log(`Blocked Ctrl + ${event.code}`);
+                }
+            }
+
             switch (event.code) {
                 case 'KeyW': moveForward = true; break;
                 case 'KeyA': moveLeft = true; break;
@@ -473,7 +474,7 @@
                 case 'KeyD': moveRight = true; break;
                 case 'ShiftLeft': moveUp = true; break;
                 case 'Space': moveDown = true; break;
-                case 'ControlLeft':
+                case 'ControlLeft': 
                 case 'ControlRight': isCtrlPressed = true; break;
                 case 'Escape': controls.unlock(); break;
             }
@@ -487,21 +488,20 @@
                 case 'KeyD': moveRight = false; break;
                 case 'ShiftLeft': moveUp = false; break;
                 case 'Space': moveDown = false; break;
-                case 'ControlLeft':
+                case 'ControlLeft': 
                 case 'ControlRight': isCtrlPressed = false; break;
             }
         }
 
+        // Touch controls
         function onTouchStart(event) {
-            console.log('Touch start:', event.touches.length);
             event.preventDefault();
+            console.log(`Touch start: ${event.touches.length} fingers`);
             if (event.touches.length === 1) {
-                // Single finger drag
                 isDragging = true;
                 touchStartX = event.touches[0].clientX;
                 touchStartY = event.touches[0].clientY;
             } else if (event.touches.length === 2) {
-                // Two fingers pinch
                 isPinching = true;
                 isDragging = false;
                 const dx = event.touches[0].clientX - event.touches[1].clientX;
@@ -513,24 +513,27 @@
         function onTouchMove(event) {
             event.preventDefault();
             event.stopPropagation();
-            console.log('Touch move:', event.touches.length, 'Scale:', event.scale);
+            console.log(`Touch move: ${event.touches.length} fingers`);
             if (event.touches.length === 1 && isDragging) {
-                // Single finger drag
                 const deltaX = event.touches[0].clientX - touchStartX;
                 const deltaY = event.touches[0].clientY - touchStartY;
-                camera.rotation.order = 'YXZ';
-                camera.rotation.y -= deltaX * 0.005;
-                camera.rotation.x -= deltaY * 0.005;
-                camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+                const yaw = -deltaX * 0.003;
+                const pitch = -deltaY * 0.003;
+                const euler = new THREE.Euler(pitch, yaw, 0, 'YXZ');
+                const quaternion = new THREE.Quaternion().setFromEuler(euler);
+                camera.quaternion.multiplyQuaternions(quaternion, camera.quaternion);
+                const eulerCheck = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+                eulerCheck.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, eulerCheck.x));
+                camera.quaternion.setFromEuler(eulerCheck);
                 touchStartX = event.touches[0].clientX;
                 touchStartY = event.touches[0].clientY;
             } else if (event.touches.length === 2 && isPinching) {
-                // Two fingers pinch
                 const dx = event.touches[0].clientX - event.touches[1].clientX;
                 const dy = event.touches[0].clientY - event.touches[1].clientY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-                const deltaPinch = (distance - pinchStartDistance) * 0.1; // Normalize sensitivity
-                const moveSpeed = 0.2; // Adjusted for smoother movement
+                const deltaPinch = (distance - pinchStartDistance) * 0.08;
+                console.log(`Pinch delta: ${deltaPinch}`);
+                const moveSpeed = 0.4;
                 const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
                 camera.position.add(forward.multiplyScalar(deltaPinch * moveSpeed));
                 pinchStartDistance = distance;
@@ -538,12 +541,13 @@
         }
 
         function onTouchEnd(event) {
-            console.log('Touch end');
             event.preventDefault();
+            console.log('Touch end');
             isPinching = false;
             isDragging = false;
         }
 
+        // Window resize handler
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -552,18 +556,18 @@
             composer.setSize(window.innerWidth, window.innerHeight);
         }
 
+        // Spawn text objects
         function spawnTextNearCamera() {
             if (!font || texts.length >= maxTexts) return;
             const text = romanticWords[Math.floor(Math.random() * romanticWords.length)];
             const geometry = new THREE.TextGeometry(text, {
                 font: font,
-                size: 4.0,
-                height: 0.528,
+                size: 4.5,
+                height: 0.6,
                 curveSegments: 12,
                 bevelEnabled: true,
-                bevelThickness: 0.132,
-                bevelSize: 0.099,
-                bevelOffset: 0,
+                bevelThickness: 0.15,
+                bevelSize: 0.1,
                 bevelSegments: 3
             });
             const material = new THREE.MeshBasicMaterial({
@@ -572,12 +576,12 @@
             });
             const mesh = new THREE.Mesh(geometry, material);
             mesh.position.set(
-                camera.position.x + (Math.random() - 0.5) * 350,
-                camera.position.y + (Math.random() - 0.5) * 350,
-                camera.position.z + (Math.random() - 0.5) * 350
+                camera.position.x + (Math.random() - 0.5) * 400,
+                camera.position.y + (Math.random() - 0.5) * 400,
+                camera.position.z + (Math.random() - 0.5) * 400
             );
-            mesh.userData = { 
-                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.02, -0.05, (Math.random() - 0.5) * 0.02),
+            mesh.userData = {
+                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.03, -0.06, (Math.random() - 0.5) * 0.03),
                 pulse: Math.random() * Math.PI * 2,
                 rotationSpeed: (Math.random() - 0.5) * 0.02
             };
@@ -585,24 +589,24 @@
             texts.push(mesh);
         }
 
+        // Spawn particles
         function spawnParticleAtCamera() {
             if (particles.length >= maxParticles) return;
             const material = new THREE.MeshBasicMaterial({
                 color: Math.random() > 0.5 ? 0xff4d4d : 0xffffff,
                 transparent: true,
-                opacity: 0.8
+                opacity: 0.9
             });
-            const particle = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), material);
-            const radius = 100;
+            const particle = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), material);
+            const radius = 120;
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.random() * Math.PI;
             const x = radius * Math.sin(phi) * Math.cos(theta);
             const y = radius * Math.sin(phi) * Math.sin(theta);
             const z = radius * Math.cos(phi);
-            particle.position.copy(camera.position);
-            particle.position.add(new THREE.Vector3(x, y, z));
-            particle.userData = { 
-                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02),
+            particle.position.copy(camera.position).add(new THREE.Vector3(x, y, z));
+            particle.userData = {
+                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.03, (Math.random() - 0.5) * 0.03, (Math.random() - 0.5) * 0.03),
                 pulse: Math.random() * Math.PI * 2,
                 rotationSpeed: (Math.random() - 0.5) * 0.02
             };
@@ -610,11 +614,12 @@
             particles.push(particle);
         }
 
+        // Spawn dust
         function spawnDustNearCamera() {
             if (dustParticles.length >= maxDustGroups) return;
             const dustGeometry = new THREE.BufferGeometry();
             const dustVertices = [];
-            const dustCount = 800;
+            const dustCount = 600;
             for (let i = 0; i < dustCount; i++) {
                 dustVertices.push(
                     camera.position.x + (Math.random() - 0.5) * 1000,
@@ -625,10 +630,10 @@
             dustGeometry.setAttribute('position', new THREE.Float32BufferAttribute(dustVertices, 3));
             const dustMaterial = new THREE.PointsMaterial({
                 color: Math.random() > 0.5 ? 0xffffff : 0xff6666,
-                size: 0.4,
+                size: 0.5,
                 map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/circle.png'),
                 transparent: true,
-                opacity: 1.2,
+                opacity: 1.0,
                 blending: THREE.AdditiveBlending,
                 depthWrite: false
             });
@@ -636,93 +641,78 @@
             scene.add(dust);
             dust.userData = {
                 velocities: Array(dustCount).fill().map(() => new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.01,
-                    -0.03,
-                    (Math.random() - 0.5) * 0.01
+                    (Math.random() - 0.5) * 0.015,
+                    -0.05,
+                    (Math.random() - 0.5) * 0.015
                 ))
             };
             dustParticles.push(dust);
         }
 
+        // Spawn images
         function spawnImageNearCamera() {
-            if (imagePlanes.length >= maxImages || availableImages.length === 0) {
-                console.log(`Cannot spawn image: max images reached (${imagePlanes.length}/${maxImages}) or no available images`);
-                return;
-            }
+            if (imagePlanes.length >= maxImages || availableImages.length === 0) return;
             const imgElement = availableImages[Math.floor(Math.random() * availableImages.length)];
             const cssObject = new THREE.CSS3DObject(imgElement.cloneNode(true));
-            const minDistance = 50;
-            const maxDistance = 200;
+            const minDistance = 60, maxDistance = 250;
+            const radius = minDistance + Math.random() * (maxDistance - minDistance);
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.random() * Math.PI;
-            const radius = minDistance + Math.random() * (maxDistance - minDistance);
-            const x = radius * Math.sin(phi) * Math.cos(theta);
-            const y = radius * Math.sin(phi) * Math.sin(theta);
-            const z = radius * Math.cos(phi);
-            cssObject.position.copy(camera.position);
-            cssObject.position.add(new THREE.Vector3(x, y, z));
+            cssObject.position.copy(camera.position).add(new THREE.Vector3(
+                radius * Math.sin(phi) * Math.cos(theta),
+                radius * Math.sin(phi) * Math.sin(theta),
+                radius * Math.cos(phi)
+            ));
             cssObject.lookAt(camera.position);
-            const scaleFactor = 0.05;
+            const scaleFactor = 0.06;
             cssObject.scale.set(scaleFactor, scaleFactor, scaleFactor);
             cssObject.userData = {
-                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.01, 0.01, (Math.random() - 0.5) * 0.01),
+                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.015, 0.015, (Math.random() - 0.5) * 0.015),
                 pulse: Math.random() * Math.PI * 2,
                 rotationSpeed: (Math.random() - 0.5) * 0.005
             };
             scene.add(cssObject);
             imagePlanes.push(cssObject);
-            console.log(`Spawned CSS3D image at position: ${cssObject.position.x}, ${cssObject.position.y}, ${cssObject.position.z}`);
         }
 
+        // Animation loop
         function animate() {
             requestAnimationFrame(animate);
             const time = performance.now();
             const delta = (time - prevTime) / 1000;
 
+            // Update light
             dynamicLight.position.set(
                 10 * Math.sin(time * 0.001),
                 10 * Math.cos(time * 0.001),
                 10 * Math.sin(time * 0.0005)
             );
-            dynamicLight.intensity = 2.5 + Math.sin(time * 0.002) * 0.5;
+            dynamicLight.intensity = 3.0 + Math.sin(time * 0.002) * 0.5;
 
+            // Spawn objects
             const isInitialLoad = time < initialLoadTime + 5000;
-            const textSpawnChance = isInitialLoad ? 0.5 : 0.2;
-            const dustSpawnChance = isInitialLoad ? 0.9 : 0.5;
-            const imageSpawnChance = isInitialLoad ? 0.03 : 0.01;
+            const textSpawnChance = isInitialLoad ? 0.4 : 0.15;
+            const dustSpawnChance = isInitialLoad ? 0.8 : 0.4;
+            const imageSpawnChance = isInitialLoad ? 0.02 : 0.008;
 
-            let textCount = 0;
-            if (Math.random() < textSpawnChance && texts.length < maxTexts && textCount < 5) {
-                spawnTextNearCamera();
-                textCount++;
-            }
-
-            let particleCount = 0;
-            if (((moveForward || moveBackward || moveLeft || moveRight || moveUp || moveDown) && time - lastParticleTime > 10) || Math.random() < 0.25) {
-                if (particles.length < maxParticles && particleCount < 5) {
+            if (Math.random() < textSpawnChance && texts.length < maxTexts) spawnTextNearCamera();
+            if (((moveForward || moveBackward || moveLeft || moveRight || moveUp || moveDown) && time - lastParticleTime > 10) || Math.random() < 0.2) {
+                if (particles.length < maxParticles) {
                     spawnParticleAtCamera();
                     lastParticleTime = time;
-                    particleCount++;
                 }
             }
+            if (Math.random() < dustSpawnChance && dustParticles.length < maxDustGroups) spawnDustNearCamera();
+            if (Math.random() < imageSpawnChance && imagePlanes.length < maxImages) spawnImageNearCamera();
 
-            if (Math.random() < dustSpawnChance && dustParticles.length < maxDustGroups) {
-                spawnDustNearCamera();
-            }
-
-            let imageCount = 0;
-            if (Math.random() < imageSpawnChance && imagePlanes.length < maxImages && imageCount < 2) {
-                spawnImageNearCamera();
-                imageCount++;
-            }
-
+            // Update particles
             particles.forEach(particle => {
                 particle.position.add(particle.userData.velocity);
                 particle.rotation.x += particle.userData.rotationSpeed;
                 particle.rotation.y += particle.userData.rotationSpeed;
                 const pulse = Math.sin(time * 0.001 + particle.userData.pulse) * 0.2 + 0.8;
                 const distance = particle.position.distanceTo(camera.position);
-                const fadeFactor = distance < clearZone ? 1.0 : Math.max(0.1, Math.exp(-(distance - clearZone) / 100));
+                const fadeFactor = distance < clearZone ? 1 : Math.max(0, Math.exp(-(distance - clearZone) / 80));
                 particle.material.opacity = pulse * fadeFactor;
                 if (distance > maxDistance || particle.position.y < camera.position.y - maxDistance) {
                     scene.remove(particle);
@@ -730,32 +720,34 @@
                 }
             });
 
+            // Update texts
             texts.forEach(text => {
                 text.position.add(text.userData.velocity);
                 text.rotation.y += text.userData.rotationSpeed;
-                const pulse = Math.sin(time * 0.001 + text.userData.pulse) * 0.2 + 0.8;
+                const pulse = Math.sin(time * 0.001 + text.userData.time.pulse);
                 const distance = text.position.distanceTo(camera.position);
-                const fadeFactor = distance < clearZone ? 1.0 : Math.max(0.1, Math.exp(-(distance - clearZone) / 100));
+                const fadeFactor = distance < clearZone ? 1 : Math.max(0, Math.exp(-(distance - clearZone) / 80));
                 text.material.opacity = pulse * fadeFactor;
                 if (distance > maxDistance || text.position.y < camera.position.y - maxDistance) {
                     scene.remove(text);
-                    texts = texts.filter(t => t !== text);
+                    texts = texts.filter(p => p !== text);
                 }
             });
 
+            // Update dust
             dustParticles = dustParticles.filter(dust => {
                 const positions = dust.geometry.attributes.position.array;
                 const velocities = dust.userData.velocities;
-                let keep = false;
+                let keep = true;
                 for (let i = 0; i < positions.length; i += 3) {
                     positions[i] += velocities[i / 3].x;
                     positions[i + 1] += velocities[i / 3].y;
                     positions[i + 2] += velocities[i / 3].z;
-                    const distance = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]).distanceTo(camera.position);
+                    const distance = new THREE.Vector3(positions[i]);
                     if (distance <= maxDistance && positions[i + 1] > camera.position.y - maxDistance) {
                         keep = true;
-                        const fadeFactor = distance < clearZone ? 1.0 : Math.max(0.1, Math.exp(-(distance - clearZone) / 100));
-                        dust.material.opacity = 1.2 * fadeFactor;
+                        const fadeFactor = distance < clearZone ? 1 : Math.max(0, Math.exp(-(distance - clearZone) / 80));
+                        dust.material.opacity = 1.0 * fadeFactor;
                     }
                 }
                 dust.geometry.attributes.position.needsUpdate = true;
@@ -767,21 +759,22 @@
                 return true;
             });
 
+            // Update images
             imagePlanes.forEach(image => {
                 image.position.add(image.userData.velocity);
                 image.lookAt(camera.position);
                 image.rotation.y += image.userData.rotationSpeed;
                 const pulse = Math.sin(time * 0.001 + image.userData.pulse) * 0.1 + 0.9;
                 const distance = image.position.distanceTo(camera.position);
-                const fadeFactor = distance < clearZone ? 1.0 : Math.max(0.5, Math.exp(-(distance - clearZone) / 50));
+                const fadeFactor = distance < clearZone ? 1 : Math.max(0.5, Math.exp(-(distance - clearZone) / 50));
                 image.element.style.opacity = pulse * fadeFactor;
                 if (distance > maxDistance || image.position.y > camera.position.y + maxDistance) {
-                    console.log(`Removing CSS3D image at position: ${image.position.x}, ${image.position.y}, ${image.position.z}`);
                     scene.remove(image);
                     imagePlanes = imagePlanes.filter(img => img !== image);
-                }
+                });
             });
 
+            // Update desktop controls
             if (!isMobile) {
                 velocity.x *= 0.9;
                 velocity.y *= 0.9;
@@ -792,11 +785,11 @@
                 direction.y = Number(moveUp) - Number(moveDown);
                 direction.normalize();
 
-                if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
-                if (moveUp || moveDown) velocity.y -= direction.y * 400.0 * delta;
+                if (moveForward || moveBackward) velocity.z -= direction.z * 400 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 400 * delta;
+                if (moveUp || moveDown) velocity.y -= direction.y * 400 * delta;
 
-                const speedMultiplier = isCtrlPressed ? 2.0 : 1.0;
+                const speedMultiplier = isCtrlPressed ? 2 : 1;
                 controls.moveRight(-velocity.x * delta * speedMultiplier);
                 controls.moveForward(-velocity.z * delta * speedMultiplier);
                 controls.getObject().position.y += velocity.y * delta * speedMultiplier;
