@@ -89,7 +89,7 @@
 </head>
 <body>
     <div id="info-screen">
-        <h1>Phép màu 1/6</h1>
+        <h1>Phép màu 1/6   59</h1>
         <p><strong>Máy tính:</strong></p>
         <p>Chuột: Xoay góc nhìn</p>
         <p>W/A/S/D: Di chuyển</p>
@@ -407,13 +407,13 @@
             const quaternion = new THREE.Quaternion();
             const euler = new THREE.Euler();
 
-            // Apply rotations in YXZ order for natural movement
+            // Apply rotations in YXZ order, inverting alpha and gamma to fix left/right issues
             if (isIOS) {
-                // iOS uses a different coordinate system
-                euler.set(beta, alpha, -gamma, 'YXZ');
-            } else {
-                // Android and others
+                // iOS: Invert alpha (yaw) and gamma (roll) for natural movement
                 euler.set(beta, -alpha, gamma, 'YXZ');
+            } else {
+                // Android: Invert alpha (yaw) and gamma (roll) for natural movement
+                euler.set(beta, alpha, -gamma, 'YXZ');
             }
 
             // Adjust for landscape orientation
