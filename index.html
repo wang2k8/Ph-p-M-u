@@ -89,7 +89,7 @@
 </head>
 <body>
     <div id="info-screen">
-        <h1>Phép màu 1/6(1) </h1>
+        <h1>Phép màu 1/6(2) </h1>
         <p><strong>Máy tính:</strong></p>
         <p>Chuột: Xoay góc nhìn</p>
         <p>W/A/S/D: Di chuyển</p>
@@ -392,9 +392,9 @@
             const beta = THREE.MathUtils.degToRad(event.beta - initialOrientation.beta);
             const gamma = THREE.MathUtils.degToRad(event.gamma - initialOrientation.gamma);
             camera.rotation.order = 'YXZ';
-            camera.rotation.y = alpha;
+            camera.rotation.y = -alpha;
             camera.rotation.x = beta;
-            camera.rotation.z = gamma;
+            camera.rotation.z = -gamma;
         }
 
         function preloadImages() {
