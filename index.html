@@ -170,9 +170,9 @@
         const romanticWords = ['I', 'Love', 'You', '<3', 'I', 'Love', 'You', '<3'];
         let font = null;
         let titleFont = null;
-        const maxParticles = 200; // Reduced for performance
-        const maxTexts = 200; // Reduced for performance
-        const maxDustGroups = 150; // Reduced for performance
+        const maxParticles = 200;
+        const maxTexts = 200;
+        const maxDustGroups = 150;
         const maxImages = 36;
         let availableImages = [];
         const initialLoadTime = performance.now();
@@ -392,9 +392,10 @@
             const beta = THREE.MathUtils.degToRad(event.beta - initialOrientation.beta);
             const gamma = THREE.MathUtils.degToRad(event.gamma - initialOrientation.gamma);
             camera.rotation.order = 'YXZ';
-            camera.rotation.y = -alpha;
+            camera.rotation.y = alpha; // Reversed yaw (removed negative sign)
             camera.rotation.x = beta;
             camera.rotation.z = gamma;
+            console.log(`Orientation: alpha=${event.alpha.toFixed(2)}, beta=${event.beta.toFixed(2)}, gamma=${event.gamma.toFixed(2)}`);
         }
 
         function preloadImages() {
@@ -472,7 +473,7 @@
                 if (!useGyroscope && isRotating) {
                     const deltaX = newTouchX - touchStartX;
                     const deltaY = newTouchY - touchStartY;
-                    camera.rotation.y -= deltaX * 0.005;
+                    camera.rotation.y += deltaX * 0.005; // Reversed yaw for touch
                     camera.rotation.x -= deltaY * 0.005;
                     camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
                 }
