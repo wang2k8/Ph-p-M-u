@@ -20,7 +20,6 @@
             height: 100%;
             overflow: hidden;
             background: #000;
-            touch-action: none;
             -webkit-user-select: none;
             user-select: none;
         }
@@ -70,7 +69,6 @@
         }
         canvas {
             display: block;
-            touch-action: none;
         }
         @keyframes pulse {
             0% { transform: scale(1); }
@@ -97,17 +95,21 @@
 <body>
     <div id="info-screen">
         <h1>Phép Màu 1/6</h1>
-        <p><strong>Máy tính:</strong></p>
-        <p>Chuột: Xoay góc nhìn</p>
-        <p>W/A/S/D: Di chuyển</p>
-        <p>Space: Bay lên</p>
-        <p>Shift: Bay xuống</p>
-        <p>Ctrl: Tăng tốc</p>
-        <p>ESC: Thoát</p>
-        <p><strong>Điện thoại:</strong></p>
-        <p>Xoay điện thoại: Quan sát 360°</p>
-        <p>Vuốt 1 ngón: Xoay góc nhìn</p>
-        <p>Zoom 2 ngón: Tiến/lùi</p>
+        <div id="desktop-controls" style="display: none;">
+            <p><strong>Máy tính:</strong></p>
+            <p>Chuột: Xoay góc nhìn</p>
+            <p>W/A/S/D: Di chuyển</p>
+            <p>Space: Bay lên</p>
+            <p>Shift: Bay xuống</p>
+            <p>Ctrl: Tăng tốc</p>
+            <p>ESC: Thoát</p>
+        </div>
+        <div id="mobile-controls" style="display: none;">
+            <p><strong>Điện thoại:</strong></p>
+            <p>Xoay điện thoại: Quan sát 360°</p>
+            <p>Vuốt 1 ngón: Xoay góc nhìn</p>
+            <p>Zoom 2 ngón: Tiến/lùi</p>
+        </div>
         <button id="start-button">Bắt đầu</button>
     </div>
     <div id="image-container">
@@ -175,17 +177,20 @@
         let isExperienceStarted = false;
         const romanticWords = ['I', 'Love', 'You', '<3', 'I', 'Love', 'You', '<3'];
         let font = null, titleFont = null;
-        const maxParticles = 150, maxTexts = 150, maxDustGroups = 50, maxImages = 36;
+        const maxParticles = 300, maxTexts = 300, maxDustGroups = 50, maxImages = 72; // Tăng số lượng ảnh tối đa gấp đôi
         let availableImages = [];
         const initialLoadTime = performance.now();
         let dynamicLight;
         const maxDistance = 1000, clearZone = 50;
 
+        // Show appropriate controls based on device
+        document.getElementById(isMobile ? 'mobile-controls' : 'desktop-controls').style.display = 'block';
+
         // Initialize the scene
         function init() {
             console.log('Initializing scene...');
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 2000);
             camera.position.set(0, 0, 10);
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -216,7 +221,7 @@
             composer.addPass(effectPass);
 
             scene.add(new THREE.AmbientLight(0x404040, 0.9));
-            dynamicLight = new THREE.PointLight(0xff6666, 3.0, 100, 2);
+            dynamicLight = new THREE.PointLight(0xff6666, 3.0, 300, 2);
             dynamicLight.position.set(10, 10, 10);
             scene.add(dynamicLight);
 
@@ -318,7 +323,7 @@
 
             const dustGeometry = new THREE.BufferGeometry();
             const dustVertices = [];
-            const dustCount = 300; // Reduced for performance
+            const dustCount = 300;
             for (let i = 0; i < dustCount; i++) {
                 dustVertices.push(
                     camera.position.x + (Math.random() - 0.5) * 1000,
@@ -348,8 +353,18 @@
             dustParticles.push(dust);
             console.log(`Created dust group with ${dustCount} particles`);
 
-            document.addEventListener('keydown', onKeyDown);
+            window.addEventListener('keydown', onKeyDown, { capture: true });
             document.addEventListener('keyup', onKeyUp);
+
+            // Improved keydown handler for Ctrl+W and Ctrl+S
+            window.addEventListener('keydown', (event) => {
+                if (event.ctrlKey && (event.key === 'w' || event.key === 'W' || event.key === 's' || event.key === 'S')) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    console.log(`Blocked Ctrl + ${event.key}`);
+                }
+            }, { capture: true, passive: false });
+
             document.getElementById('start-button').addEventListener('click', startExperience);
 
             if (isMobile) {
@@ -391,6 +406,7 @@
         }
 
         function onDeviceOrientation(event) {
+            if (isPinching) return;
             if (!initialOrientation) {
                 if (event.alpha === null || event.beta === null || event.gamma === null) {
                     console.warn('Device orientation data unavailable');
@@ -464,13 +480,6 @@
         }
 
         function onKeyDown(event) {
-            if (isExperienceStarted && event.ctrlKey) {
-                if (event.code === 'KeyW' || event.code === 'KeyS') {
-                    event.preventDefault();
-                    console.log(`Blocked Ctrl + ${event.code}`);
-                }
-            }
-
             switch (event.code) {
                 case 'KeyW': moveForward = true; break;
                 case 'KeyA': moveLeft = true; break;
@@ -510,6 +519,7 @@
                 const dx = event.touches[0].clientX - event.touches[1].clientX;
                 const dy = event.touches[0].clientY - event.touches[1].clientY;
                 pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
+                console.log(`Pinch start distance: ${pinchStartDistance}`);
             }
         }
 
@@ -533,13 +543,14 @@
             } else if (event.touches.length === 2 && isPinching) {
                 const dx = event.touches[0].clientX - event.touches[1].clientX;
                 const dy = event.touches[0].clientY - event.touches[1].clientY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const deltaPinch = (distance - pinchStartDistance) * 0.08;
-                console.log(`Pinch delta: ${deltaPinch}`);
-                const moveSpeed = 0.4;
+                const currentDistance = Math.sqrt(dx * dx + dy * dy);
+                const scaleFactor = pinchStartDistance / currentDistance;
+                const zoomSpeed = 2.0;
+                const zoomDelta = (scaleFactor - 1) * zoomSpeed;
+                console.log(`Pinch scale: ${scaleFactor}, Zoom delta: ${zoomDelta}`);
                 const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-                camera.position.add(forward.multiplyScalar(deltaPinch * moveSpeed));
-                pinchStartDistance = distance;
+                camera.position.add(forward.multiplyScalar(zoomDelta));
+                pinchStartDistance = currentDistance;
             }
         }
 
@@ -575,24 +586,41 @@
                 bevelSize: 0.1,
                 bevelSegments: 3
             });
+            geometry.computeBoundingBox();
+            const boundingBox = geometry.boundingBox;
+            const textWidth = boundingBox.max.x - boundingBox.min.x;
+            const textHeight = boundingBox.max.y - boundingBox.min.y;
             const material = new THREE.MeshBasicMaterial({
                 color: Math.random() > 0.5 ? 0xff4d4d : 0xffffff,
-                transparent: true
+                transparent: true,
+                opacity: 0.9
             });
             const mesh = new THREE.Mesh(geometry, material);
+            const minDistance = 100;
+            const maxDistance = 400;
+            const radius = minDistance + Math.random() * (maxDistance - minDistance);
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI;
             mesh.position.set(
-                camera.position.x + (Math.random() - 0.5) * 400,
-                camera.position.y + (Math.random() - 0.5) * 400,
-                camera.position.z + (Math.random() - 0.5) * 400
+                camera.position.x + radius * Math.sin(phi) * Math.cos(theta),
+                camera.position.y + radius * Math.sin(phi) * Math.sin(theta),
+                camera.position.z + radius * Math.cos(phi)
             );
+            mesh.lookAt(camera.position);
             mesh.userData = {
-                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.03, -0.06, (Math.random() - 0.5) * 0.03),
+                velocity: new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.03,
+                    -0.06,
+                    (Math.random() - 0.5) * 0.03
+                ),
                 pulse: Math.random() * Math.PI * 2,
-                rotationSpeed: (Math.random() - 0.5) * 0.02
+                rotationSpeed: (Math.random() - 0.5) * 0.02,
+                width: textWidth,
+                height: textHeight
             };
             scene.add(mesh);
             texts.push(mesh);
-            console.log(`Spawned text: ${text}`);
+            console.log(`Spawned text: ${text} at position`, mesh.position);
         }
 
         function spawnParticleAtCamera() {
@@ -614,13 +642,17 @@
             const z = radius * Math.cos(phi);
             particle.position.copy(camera.position).add(new THREE.Vector3(x, y, z));
             particle.userData = {
-                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.03, (Math.random() - 0.5) * 0.03, (Math.random() - 0.5) * 0.03),
+                velocity: new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.03,
+                    (Math.random() - 0.5) * 0.03,
+                    (Math.random() - 0.5) * 0.03
+                ),
                 pulse: Math.random() * Math.PI * 2,
                 rotationSpeed: (Math.random() - 0.5) * 0.02
             };
             scene.add(particle);
             particles.push(particle);
-            console.log('Spawned particle');
+            console.log('Spawned particle at', particle.position);
         }
 
         function spawnDustNearCamera() {
@@ -668,7 +700,8 @@
             }
             const imgElement = availableImages[Math.floor(Math.random() * availableImages.length)];
             const cssObject = new THREE.CSS3DObject(imgElement.cloneNode(true));
-            const minDistance = 60, maxDistance = 250;
+            const minDistance = 100;
+            const maxDistance = 400;
             const radius = minDistance + Math.random() * (maxDistance - minDistance);
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.random() * Math.PI;
@@ -681,13 +714,17 @@
             const scaleFactor = 0.06;
             cssObject.scale.set(scaleFactor, scaleFactor, scaleFactor);
             cssObject.userData = {
-                velocity: new THREE.Vector3((Math.random() - 0.5) * 0.015, 0.015, (Math.random() - 0.5) * 0.015),
+                velocity: new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.015,
+                    0.015,
+                    (Math.random() - 0.5) * 0.015
+                ),
                 pulse: Math.random() * Math.PI * 2,
                 rotationSpeed: (Math.random() - 0.5) * 0.01
             };
             scene.add(cssObject);
             imagePlanes.push(cssObject);
-            console.log('Spawned image');
+            console.log('Spawned image at', cssObject.position);
         }
 
         function animate() {
@@ -703,19 +740,25 @@
             dynamicLight.intensity = 3.0 + Math.sin(time * 0.002) * 0.5;
 
             const isInitialLoad = time < initialLoadTime + 5000;
-            const textSpawnChance = isInitialLoad ? 0.4 : 0.15;
+            const textSpawnChance = isInitialLoad ? 0.6 : 0.3;
             const dustSpawnChance = isInitialLoad ? 0.8 : 0.4;
-            const imageSpawnChance = isInitialLoad ? 0.02 : 0.008;
+            const imageSpawnChance = isInitialLoad ? 0.1 : 0.04; // Tăng xác suất xuất hiện ảnh gấp đôi
 
-            if (Math.random() < textSpawnChance && texts.length < maxTexts) spawnTextNearCamera();
-            if (((moveForward || moveBackward || moveLeft || moveRight || moveUp || moveDown) && time - lastParticleTime > 10) || Math.random() < 0.2) {
+            if (Math.random() < textSpawnChance && texts.length < maxTexts) {
+                spawnTextNearCamera();
+            }
+            if (((moveForward || moveBackward || moveLeft || moveRight || moveUp || moveDown) && time - lastParticleTime > 5) || Math.random() < 0.3) {
                 if (particles.length < maxParticles) {
                     spawnParticleAtCamera();
                     lastParticleTime = time;
                 }
             }
-            if (Math.random() < dustSpawnChance && dustParticles.length < maxDustGroups) spawnDustNearCamera();
-            if (Math.random() < imageSpawnChance && imagePlanes.length < maxImages) spawnImageNearCamera();
+            if (Math.random() < dustSpawnChance && dustParticles.length < maxDustGroups) {
+                spawnDustNearCamera();
+            }
+            if (Math.random() < imageSpawnChance && imagePlanes.length < maxImages) {
+                spawnImageNearCamera();
+            }
 
             particles.forEach(particle => {
                 particle.position.add(particle.userData.velocity);
@@ -728,6 +771,7 @@
                 if (distance > maxDistance || particle.position.y < camera.position.y - maxDistance) {
                     scene.remove(particle);
                     particles = particles.filter(p => p !== particle);
+                    console.log('Removed particle');
                 }
             });
 
@@ -741,6 +785,7 @@
                 if (distance > maxDistance || text.position.y < camera.position.y - maxDistance) {
                     scene.remove(text);
                     texts = texts.filter(t => t !== text);
+                    console.log('Removed text');
                 }
             });
 
@@ -763,6 +808,7 @@
                 dust.material.needsUpdate = true;
                 if (!keep) {
                     scene.remove(dust);
+                    console.log('Removed dust group');
                     return false;
                 }
                 return true;
@@ -772,13 +818,14 @@
                 image.position.add(image.userData.velocity);
                 image.lookAt(camera.position);
                 image.rotation.y += image.userData.rotationSpeed;
-                const pulse = Math.sin(time * 0.001 + image.userData.pulse) * 0.1 + 0.9;
+                const pulse = Math.sin(time * 0.001 + image.userData.pulse) * 0.0 + 0.9;
                 const distance = image.position.distanceTo(camera.position);
-                const fadeFactor = distance < clearZone ? 1 : Math.max(0.5, Math.exp(-(distance - clearZone) / 50));
+                const fadeFactor = distance < clearZone ? 1 : Math.max(0, Math.exp(-(distance - clearZone) / 50));
                 image.element.style.opacity = pulse * fadeFactor;
                 if (distance > maxDistance || image.position.y > camera.position.y + maxDistance) {
                     scene.remove(image);
                     imagePlanes = imagePlanes.filter(img => img !== image);
+                    console.log('Removed image plane');
                 }
             });
 
