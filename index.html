@@ -89,7 +89,7 @@
 </head>
 <body>
     <div id="info-screen">
-        <h1>Phép màu 1/6   59</h1>
+        <h1>Phép màu 1/6</h1>
         <p><strong>Máy tính:</strong></p>
         <p>Chuột: Xoay góc nhìn</p>
         <p>W/A/S/D: Di chuyển</p>
@@ -99,7 +99,8 @@
         <p>ESC: Thoát</p>
         <p><strong>Điện thoại:</strong></p>
         <p>Xoay điện thoại: Quan sát 360 độ</p>
-        <p>2 ngón zoom vào/ra: Tiến/lùi</p>
+        <p>Vuốt 1 ngón: Xoay góc nhìn</p>
+        <p>Zoom 2 ngón: Tiến/lùi</p>
         <button id="start-button">Click</button>
     </div>
     <div id="image-container">
@@ -163,7 +164,7 @@
         let imagePlanes = [];
         let isMobile = /Mobi|Android/i.test(navigator.userAgent);
         let touchStartX, touchStartY, pinchStartDistance;
-        let isPinching = false, isRotating = false;
+        let isPinching = false, isRotating = false, isDragging = false;
         let useGyroscope = false;
         let initialOrientation = null;
         let lastParticleTime = 0;
@@ -207,9 +208,9 @@
                 focalDistance: 0.7
             });
             const bloomEffect = new POSTPROCESSING.BloomEffect({
-                intensity: 2.0,
-                luminanceThreshold: 0.4,
-                luminanceSmoothing: 0.2
+                intensity: 3.5, // Increased for stronger glow
+                luminanceThreshold: 0.3, // Lowered to include more glowing objects
+                luminanceSmoothing: 0.1 // Smoother glow transition
             });
             const effectPass = new POSTPROCESSING.EffectPass(camera, dofEffect, bloomEffect);
             composer.addPass(effectPass);
@@ -426,8 +427,10 @@
             // Convert Euler to Quaternion
             quaternion.setFromEuler(euler);
 
-            // Apply quaternion to camera
-            camera.quaternion.copy(quaternion);
+            // Apply quaternion to camera only if not dragging
+            if (!isDragging) {
+                camera.quaternion.copy(quaternion);
+            }
 
             // Limit pitch to avoid unnatural flipping
             const eulerCheck = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
@@ -489,42 +492,43 @@
         function onTouchStart(event) {
             console.log('Touch start:', event.touches.length);
             event.preventDefault();
-            if (event.touches.length === 2) {
+            if (event.touches.length === 1) {
+                // Single finger drag for rotation
+                isDragging = true;
+                touchStartX = event.touches[0].clientX;
+                touchStartY = event.touches[0].clientY;
+            } else if (event.touches.length === 2) {
+                // Two fingers for pinch-to-zoom (move forward/backward)
                 isPinching = true;
-                if (!useGyroscope) isRotating = true;
+                isDragging = false;
                 const dx = event.touches[0].clientX - event.touches[1].clientX;
                 const dy = event.touches[0].clientY - event.touches[1].clientY;
                 pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
-                touchStartX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
-                touchStartY = (event.touches[0].clientY + event.touches[1].clientY) / 2;
             }
         }
 
         function onTouchMove(event) {
             console.log('Touch move:', event.touches.length);
             event.preventDefault();
-            if (event.touches.length === 2 && isPinching) {
+            if (event.touches.length === 1 && isDragging) {
+                // Single finger drag to rotate camera
+                const deltaX = event.touches[0].clientX - touchStartX;
+                const deltaY = event.touches[0].clientY - touchStartY;
+                camera.rotation.order = 'YXZ';
+                camera.rotation.y -= deltaX * 0.005; // Adjust yaw
+                camera.rotation.x -= deltaY * 0.005; // Adjust pitch
+                camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x)); // Limit pitch
+                touchStartX = event.touches[0].clientX;
+                touchStartY = event.touches[0].clientY;
+            } else if (event.touches.length === 2 && isPinching) {
+                // Two fingers pinch-to-zoom
                 const dx = event.touches[0].clientX - event.touches[1].clientX;
                 const dy = event.touches[0].clientY - event.touches[1].clientY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-                const newTouchX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
-                const newTouchY = (event.touches[0].clientY + event.touches[1].clientY) / 2;
-
-                if (!useGyroscope && isRotating) {
-                    const deltaX = newTouchX - touchStartX;
-                    const deltaY = newTouchY - touchStartY;
-                    camera.rotation.y -= deltaX * 0.005;
-                    camera.rotation.x -= deltaY * 0.005;
-                    camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
-                }
-
                 const deltaPinch = distance - pinchStartDistance;
-                const moveSpeed = 0.1;
+                const moveSpeed = 0.15; // Increased for smoother movement
                 const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
                 camera.position.add(forward.multiplyScalar(deltaPinch * moveSpeed));
-
-                touchStartX = newTouchX;
-                touchStartY = newTouchY;
                 pinchStartDistance = distance;
             }
         }
@@ -533,7 +537,7 @@
             console.log('Touch end');
             event.preventDefault();
             isPinching = false;
-            isRotating = false;
+            isDragging = false;
         }
 
         function onWindowResize() {
