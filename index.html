@@ -17,6 +17,7 @@
             height: 100%;
             overflow: hidden;
             background: #000;
+            touch-action: none; /* Prevent default touch behaviors */
         }
         #info-screen {
             position: absolute;
@@ -164,7 +165,7 @@
         let imagePlanes = [];
         let isMobile = /Mobi|Android/i.test(navigator.userAgent);
         let touchStartX, touchStartY, pinchStartDistance;
-        let isPinching = false, isRotating = false, isDragging = false;
+        let isPinching = false, isDragging = false;
         let useGyroscope = false;
         let initialOrientation = null;
         let lastParticleTime = 0;
@@ -208,9 +209,9 @@
                 focalDistance: 0.7
             });
             const bloomEffect = new POSTPROCESSING.BloomEffect({
-                intensity: 3.5, // Increased for stronger glow
-                luminanceThreshold: 0.3, // Lowered to include more glowing objects
-                luminanceSmoothing: 0.1 // Smoother glow transition
+                intensity: 3.5,
+                luminanceThreshold: 0.3,
+                luminanceSmoothing: 0.1
             });
             const effectPass = new POSTPROCESSING.EffectPass(camera, dofEffect, bloomEffect);
             composer.addPass(effectPass);
@@ -352,8 +353,12 @@
             if (isMobile) {
                 setupGyroscope();
                 renderer.domElement.addEventListener('touchstart', onTouchStart);
-                renderer.domElement.addEventListener('touchmove', onTouchMove);
+                renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
                 renderer.domElement.addEventListener('touchend', onTouchEnd);
+                // Prevent default pinch-to-zoom
+                document.addEventListener('gesturestart', (e) => e.preventDefault());
+                document.addEventListener('gesturechange', (e) => e.preventDefault());
+                document.addEventListener('gestureend', (e) => e.preventDefault());
             }
 
             window.addEventListener('resize', onWindowResize);
@@ -391,33 +396,31 @@
             }
 
             // Convert angles to radians
-            let alpha = THREE.MathUtils.degToRad(event.alpha || 0); // Yaw (rotation around Z-axis)
-            let beta = THREE.MathUtils.degToRad(event.beta || 0);   // Pitch (rotation around X-axis)
-            let gamma = THREE.MathUtils.degToRad(event.gamma || 0); // Roll (rotation around Y-axis)
+            let alpha = THREE.MathUtils.degToRad(event.alpha || 0); // Yaw
+            let beta = THREE.MathUtils.degToRad(event.beta || 0);   // Pitch
+            let gamma = THREE.MathUtils.degToRad(event.gamma || 0); // Roll
 
             // Adjust for initial orientation
             alpha -= THREE.MathUtils.degToRad(initialOrientation.alpha || 0);
             beta -= THREE.MathUtils.degToRad(initialOrientation.beta || 0);
             gamma -= THREE.MathUtils.degToRad(initialOrientation.gamma || 0);
 
-            // Detect device orientation (portrait or landscape)
+            // Detect device orientation
             const isLandscape = Math.abs(window.orientation) === 90;
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-            // Create a quaternion for device orientation
+            // Create quaternion
             const quaternion = new THREE.Quaternion();
             const euler = new THREE.Euler();
 
-            // Apply rotations in YXZ order, inverting alpha and gamma to fix left/right issues
+            // Apply rotations
             if (isIOS) {
-                // iOS: Invert alpha (yaw) and gamma (roll) for natural movement
                 euler.set(beta, -alpha, gamma, 'YXZ');
             } else {
-                // Android: Invert alpha (yaw) and gamma (roll) for natural movement
                 euler.set(beta, alpha, -gamma, 'YXZ');
             }
 
-            // Adjust for landscape orientation
+            // Adjust for landscape
             if (isLandscape) {
                 const landscapeAdjust = new THREE.Euler(0, 0, Math.PI / 2);
                 const landscapeQuat = new THREE.Quaternion().setFromEuler(landscapeAdjust);
@@ -427,17 +430,17 @@
             // Convert Euler to Quaternion
             quaternion.setFromEuler(euler);
 
-            // Apply quaternion to camera only if not dragging
+            // Apply to camera if not dragging
             if (!isDragging) {
                 camera.quaternion.copy(quaternion);
             }
 
-            // Limit pitch to avoid unnatural flipping
+            // Limit pitch
             const eulerCheck = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
             eulerCheck.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, eulerCheck.x));
             camera.quaternion.setFromEuler(eulerCheck);
 
-            // Log for debugging
+            // Debug
             console.log(`Alpha: ${THREE.MathUtils.radToDeg(alpha)}, Beta: ${THREE.MathUtils.radToDeg(beta)}, Gamma: ${THREE.MathUtils.radToDeg(gamma)}`);
         }
 
@@ -493,12 +496,12 @@
             console.log('Touch start:', event.touches.length);
             event.preventDefault();
             if (event.touches.length === 1) {
-                // Single finger drag for rotation
+                // Single finger drag
                 isDragging = true;
                 touchStartX = event.touches[0].clientX;
                 touchStartY = event.touches[0].clientY;
             } else if (event.touches.length === 2) {
-                // Two fingers for pinch-to-zoom (move forward/backward)
+                // Two fingers pinch
                 isPinching = true;
                 isDragging = false;
                 const dx = event.touches[0].clientX - event.touches[1].clientX;
@@ -508,25 +511,26 @@
         }
 
         function onTouchMove(event) {
-            console.log('Touch move:', event.touches.length);
             event.preventDefault();
+            event.stopPropagation();
+            console.log('Touch move:', event.touches.length, 'Scale:', event.scale);
             if (event.touches.length === 1 && isDragging) {
-                // Single finger drag to rotate camera
+                // Single finger drag
                 const deltaX = event.touches[0].clientX - touchStartX;
                 const deltaY = event.touches[0].clientY - touchStartY;
                 camera.rotation.order = 'YXZ';
-                camera.rotation.y -= deltaX * 0.005; // Adjust yaw
-                camera.rotation.x -= deltaY * 0.005; // Adjust pitch
-                camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x)); // Limit pitch
+                camera.rotation.y -= deltaX * 0.005;
+                camera.rotation.x -= deltaY * 0.005;
+                camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
                 touchStartX = event.touches[0].clientX;
                 touchStartY = event.touches[0].clientY;
             } else if (event.touches.length === 2 && isPinching) {
-                // Two fingers pinch-to-zoom
+                // Two fingers pinch
                 const dx = event.touches[0].clientX - event.touches[1].clientX;
                 const dy = event.touches[0].clientY - event.touches[1].clientY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-                const deltaPinch = distance - pinchStartDistance;
-                const moveSpeed = 0.15; // Increased for smoother movement
+                const deltaPinch = (distance - pinchStartDistance) * 0.1; // Normalize sensitivity
+                const moveSpeed = 0.2; // Adjusted for smoother movement
                 const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
                 camera.position.add(forward.multiplyScalar(deltaPinch * moveSpeed));
                 pinchStartDistance = distance;
